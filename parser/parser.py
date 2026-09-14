@@ -11,25 +11,31 @@ conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()
 
 cache = {
-    'category': {},
-    'subcategory': {},
-    'group': {},
-    'type': {},
-    'brand': {},
-    'unit': {}
+    'categories': {},
+    'subcategories': {},
+    'product_groups': {},
+    'product_types': {},
+    'brands': {},
+    'units': {}
 }
 
 def get_or_create(table, name_field, name_value, extra_fields=None, extra_values=None):
-    """Возвращает ID записи, создаёт, если её нет."""
     if name_value in cache[table]:
         return cache[table][name_value]
+
     fields = [name_field] + (extra_fields or [])
     values = [name_value] + (extra_values or [])
     placeholders = ', '.join(['%s'] * len(values))
-    sql = f"INSERT INTO {table} ({', '.join(fields)}) VALUES ({placeholders})"
+    sql = f"INSERT IGNORE INTO {table} ({', '.join(fields)}) VALUES ({placeholders})"
     cursor.execute(sql, values)
     conn.commit()
-    new_id = cursor.lastrowid
+
+    if cursor.lastrowid:
+        new_id = cursor.lastrowid
+    else:
+        cursor.execute(f"SELECT {table[:-1]}_id FROM {table} WHERE {name_field} = %s", (name_value,))
+        new_id = cursor.fetchone()[0]
+
     cache[table][name_value] = new_id
     return new_id
 
