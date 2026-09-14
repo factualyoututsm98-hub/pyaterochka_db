@@ -1,7 +1,6 @@
 import mysql.connector
 import re
 
-# --- Настройки подключения к MySQL ---
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',          # поменяй на своего пользователя
@@ -9,11 +8,9 @@ DB_CONFIG = {
     'database': 'pyaterochka'
 }
 
-# --- Подключение ---
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()
 
-# --- Кэш ID, чтобы не дублировать записи ---
 cache = {
     'category': {},
     'subcategory': {},
@@ -37,7 +34,6 @@ def get_or_create(table, name_field, name_value, extra_fields=None, extra_values
     cache[table][name_value] = new_id
     return new_id
 
-# --- Чтение файла ---
 current_category = None
 current_subcategory = None
 current_group = None
@@ -49,7 +45,6 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
         if not line.strip():
             continue
 
-        # Определяем уровень по отступу
         indent = len(line) - len(line.lstrip())
         content = line.strip()
 
@@ -85,7 +80,7 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
                 ['group_id'], [current_group]
             )
 
-        # Бренд (запоминаем, но товар обрабатываем ниже)
+        # Бренд
         elif content.startswith('БРЕНД:'):
             brand_name = content.replace('БРЕНД:', '').strip()
             current_brand = get_or_create('brands', 'name', brand_name)
