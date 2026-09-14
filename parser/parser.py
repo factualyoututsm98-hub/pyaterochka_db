@@ -1,4 +1,5 @@
 import mysql.connector
+import re
 
 DB_CONFIG = {
     'host': 'localhost',
@@ -39,10 +40,19 @@ def get_or_create(table, name_field, name_value, extra_fields=None, extra_values
     cache[table][name_value] = new_id
     return new_id
 
+def parse_float(value):
+    cleaned = re.sub(r'[^\d.,]', '', str(value)).replace(',', '.')
+    try:
+        return float(cleaned) if cleaned else 0.0
+    except ValueError:
+        return 0.0
+
 current_category = None
 current_subcategory = None
 current_group = None
 current_type = None
+current_brand = None
+current_unit = None
 
 with open('parsed_data.txt', 'r', encoding='utf-8') as f:
     for line in f:
@@ -50,16 +60,13 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
         if not line.strip():
             continue
 
-        indent = len(line) - len(line.lstrip())
         content = line.strip()
 
-        # Категория
         if content.startswith('КАТЕГОРИЯ:'):
             name = content.replace('КАТЕГОРИЯ:', '').strip()
             current_category = get_or_create('categories', 'name', name)
             current_subcategory = current_group = current_type = None
 
-        # Подкатегория
         elif content.startswith('ПОДКАТЕГОРИЯ:'):
             name = content.replace('ПОДКАТЕГОРИЯ:', '').strip()
             current_subcategory = get_or_create(
@@ -68,7 +75,6 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
             )
             current_group = current_type = None
 
-        # Группа
         elif content.startswith('ГРУППА:'):
             name = content.replace('ГРУППА:', '').strip()
             current_group = get_or_create(
@@ -77,7 +83,6 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
             )
             current_type = None
 
-        # Вид
         elif content.startswith('ВИД:'):
             name = content.replace('ВИД:', '').strip()
             current_type = get_or_create(
@@ -85,28 +90,25 @@ with open('parsed_data.txt', 'r', encoding='utf-8') as f:
                 ['group_id'], [current_group]
             )
 
-        # Бренд
         elif content.startswith('БРЕНД:'):
             brand_name = content.replace('БРЕНД:', '').strip()
             current_brand = get_or_create('brands', 'name', brand_name)
 
-        # Единица
         elif content.startswith('ЕДИНИЦА:'):
             unit_name = content.replace('ЕДИНИЦА:', '').strip()
             current_unit = get_or_create('units', 'name', unit_name)
 
-        # Товар
         elif content.startswith('ТОВАР:'):
             data = content.replace('ТОВАР:', '').strip().split('|')
             if len(data) != 6:
                 print(f"Пропущена строка (неверный формат): {content}")
                 continue
             name = data[0].strip()
-            weight = float(data[1].strip())
-            price = float(data[2].strip())
-            cost = float(data[3].strip())
-            nds = float(data[4].strip())
-            barcode = data[5].strip()
+            weight = parse_float(data[1])
+            price = parse_float(data[2])
+            cost = parse_float(data[3])
+            nds = parse_float(data[4])
+            barcode = data[5].strip()[:20] if len(data) > 5 else ''
 
             sql = """
                 INSERT INTO products 
