@@ -1,10 +1,9 @@
 import mysql.connector
-import re
 
 DB_CONFIG = {
     'host': 'localhost',
-    'user': 'root',          # поменяй на своего пользователя
-    'password': 'твой_пароль',  # поменяй на свой пароль
+    'user': 'root',
+    'password': '12345678',
     'database': 'pyaterochka'
 }
 
